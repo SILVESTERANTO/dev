@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-service
+spec:
+  selector:
+    app: devops-app     # Must match deployment labels
+  type: NodePort         # Exposes the service on a port accessible outside the cluster
+  ports:
+    - protocol: TCP
+      port: 80           # Service port
+      targetPort: 80     # Port the container listens on

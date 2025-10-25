@@ -1,0 +1,51 @@
+name: CI/CD Pipeline (Minikube - Windows)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-test-deploy:
+    runs-on: windows-latest
+
+    steps:
+      # 1️⃣ Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Install Minikube
+      - name: Install Minikube
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://storage.googleapis.com/minikube/releases/latest/minikube-installer.exe" -OutFile "minikube-installer.exe"
+          Start-Process -FilePath "minikube-installer.exe" -ArgumentList "/S" -Wait
+
+      # 3️⃣ Start Minikube
+      - name: Start Minikube
+        shell: pwsh
+        run: |
+          minikube start --driver=docker
+
+      # 4️⃣ Point Docker to Minikube
+      - name: Set Docker environment to Minikube
+        shell: pwsh
+        run: |
+          & minikube -p minikube docker-env | Invoke-Expression
+
+      # 5️⃣ Build Docker image
+      - name: Build Docker image
+        shell: pwsh
+        run: docker build -t webapp:latest .
+
+      # 6️⃣ Apply Kubernetes manifests
+      - name: Deploy to Kubernetes
+        shell: pwsh
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl rollout status deployment/devops-app
+
+      # 7️⃣ Verify deployment
+      - name: Verify pods
+        shell: pwsh
+        run: kubectl get pods

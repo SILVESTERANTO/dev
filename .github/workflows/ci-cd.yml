@@ -1,22 +1,22 @@
-name: CI/CD Pipeline (Minikube - Windows)
+name: GOVT-PREP CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build-test-push:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest   # ✅ switch to Linux runner
 
     steps:
-      # 1️⃣ Checkout repository
-      - name: Checkout code
+      # 1️⃣ Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Docker (Windows)
-      - name: Set up Docker (Windows)
-        shell: powershell
-        run: docker version
+      # 2️⃣ Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       # 3️⃣ Log in to Docker Hub
       - name: Login to Docker Hub
@@ -27,27 +27,19 @@ jobs:
 
       # 4️⃣ Build Docker image
       - name: Build Docker image
-        shell: powershell
         run: |
           docker build -t silvesteranto/webapp:latest .
 
-      # 5️⃣ Test the Docker image (basic container run)
-      - name: Test the Docker image
-        shell: powershell
+      # 5️⃣ Test the Docker image
+      - name: Test Docker image
         run: |
           docker run -d -p 8080:80 --name test-webapp silvesteranto/webapp:latest
-          Start-Sleep -Seconds 5
-          docker ps | Select-String test-webapp
+          sleep 5
+          docker ps | grep test-webapp
           docker stop test-webapp
           docker rm test-webapp
 
-      # 6️⃣ Push Docker image to Docker Hub
+      # 6️⃣ Push Docker image
       - name: Push Docker image
-        shell: powershell
         run: |
           docker push silvesteranto/webapp:latest
-
-      # 7️⃣ Verify Docker images list
-      - name: List Docker images
-        shell: powershell
-        run: docker images

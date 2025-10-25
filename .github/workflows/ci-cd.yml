@@ -1,59 +1,30 @@
-name: CI/CD Pipeline (Minikube - Ubuntu)
+name: CI/CD Pipeline (Minikube - Windows)
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-test-deploy:
-    runs-on: ubuntu-latest
+  build-test-push:
+    runs-on: windows-latest
 
     steps:
       # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Install kubectl
-      - name: Install kubectl
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates curl
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-          kubectl version --client
-
-      # 3️⃣ Install Minikube
-      - name: Install Minikube
-        run: |
-          curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
-          sudo dpkg -i minikube_latest_amd64.deb
-          minikube version
-
-      # 4️⃣ Start Minikube
-      - name: Start Minikube
-        run: |
-          minikube start --driver=docker
-
-      # 5️⃣ Point Docker to Minikube
+      # 2️⃣ Point Docker to Minikube
       - name: Set Docker environment to Minikube
-        run: eval $(minikube -p minikube docker-env)
+        shell: powershell
+        run: |
+          minikube -p minikube docker-env | Invoke-Expression
 
-      # 6️⃣ Build Docker image
+      # 3️⃣ Build Docker image inside Minikube
       - name: Build Docker image
+        shell: powershell
         run: docker build -t webapp:latest .
 
-      # 7️⃣ Deploy to Kubernetes
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl delete deployment devops-app --ignore-not-found
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl rollout status deployment/devops-app
-
-      # 8️⃣ Verify deployment
-      - name: Verify pods
-        run: kubectl get pods
-
-      # 9️⃣ (Optional) Access service URL
-      - name: Show service URL
-        run: minikube service devops-service --url
+      # 4️⃣ Verify image
+      - name: List Docker images
+        shell: powershell
+        run: docker images

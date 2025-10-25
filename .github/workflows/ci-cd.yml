@@ -13,18 +13,43 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Point Docker to Minikube
-      - name: Set Docker environment to Minikube
-        shell: powershell
-        run: |
-          minikube -p minikube docker-env | Invoke-Expression
+      # 2️⃣ Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # 3️⃣ Build Docker image inside Minikube
+      # 3️⃣ Log in to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # ❌ REMOVE this step — GitHub Actions runners do NOT have Minikube.
+      # Minikube runs only locally, not inside GitHub Actions.
+
+      # ✅ Instead, build normally using GitHub-hosted Docker.
       - name: Build Docker image
         shell: powershell
-        run: docker build -t webapp:latest .
+        run: |
+          docker build -t silvesteranto/webapp:latest .
 
-      # 4️⃣ Verify image
+      # 6️⃣ Test the Docker image (basic run test)
+      - name: Test the Docker image
+        shell: powershell
+        run: |
+          docker run -d -p 8080:80 --name test-webapp silvesteranto/webapp:latest
+          Start-Sleep -Seconds 5
+          docker ps | Select-String test-webapp
+          docker stop test-webapp
+          docker rm test-webapp
+
+      # 7️⃣ Push Docker image to Docker Hub
+      - name: Push Docker image
+        shell: powershell
+        run: |
+          docker push silvesteranto/webapp:latest
+
+      # 8️⃣ List Docker images (verify)
       - name: List Docker images
         shell: powershell
         run: docker images

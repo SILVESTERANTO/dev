@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Minikube - Windows)
+name: CI/CD Pipeline (Minikube - Ubuntu)
 
 on:
   push:
@@ -6,46 +6,54 @@ on:
 
 jobs:
   build-test-deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Install Minikube
-      - name: Install Minikube
-        shell: pwsh
+      # 2️⃣ Install kubectl
+      - name: Install kubectl
         run: |
-          Invoke-WebRequest -Uri "https://storage.googleapis.com/minikube/releases/latest/minikube-installer.exe" -OutFile "minikube-installer.exe"
-          Start-Process -FilePath "minikube-installer.exe" -ArgumentList "/S" -Wait
+          sudo apt-get update
+          sudo apt-get install -y apt-transport-https ca-certificates curl
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          kubectl version --client
 
-      # 3️⃣ Start Minikube
+      # 3️⃣ Install Minikube
+      - name: Install Minikube
+        run: |
+          curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+          sudo dpkg -i minikube_latest_amd64.deb
+          minikube version
+
+      # 4️⃣ Start Minikube
       - name: Start Minikube
-        shell: pwsh
         run: |
           minikube start --driver=docker
 
-      # 4️⃣ Point Docker to Minikube
+      # 5️⃣ Point Docker to Minikube
       - name: Set Docker environment to Minikube
-        shell: pwsh
-        run: |
-          & minikube -p minikube docker-env | Invoke-Expression
+        run: eval $(minikube -p minikube docker-env)
 
-      # 5️⃣ Build Docker image
+      # 6️⃣ Build Docker image
       - name: Build Docker image
-        shell: pwsh
         run: docker build -t webapp:latest .
 
-      # 6️⃣ Apply Kubernetes manifests
+      # 7️⃣ Deploy to Kubernetes
       - name: Deploy to Kubernetes
-        shell: pwsh
         run: |
+          kubectl delete deployment devops-app --ignore-not-found
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
           kubectl rollout status deployment/devops-app
 
-      # 7️⃣ Verify deployment
+      # 8️⃣ Verify deployment
       - name: Verify pods
-        shell: pwsh
         run: kubectl get pods
+
+      # 9️⃣ (Optional) Access service URL
+      - name: Show service URL
+        run: minikube service devops-service --url

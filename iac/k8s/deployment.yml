@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: govt-prep-deploy
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: govt-prep
+  template:
+    metadata:
+      labels:
+        app: govt-prep
+    spec:
+      containers:
+      - name: govt-prep-container
+        image: madhesh1171/govt-prep-app:latest
+        ports:
+        - containerPort: 80
